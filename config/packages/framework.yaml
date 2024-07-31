@@ -1,7 +1,8 @@
 parameters:
     STRAVA_CLIENT_ID: '%env(STRAVA_CLIENT_ID)%'
+    STRAVA_CLIENT_SECRET: '%env(STRAVA_CLIENT_SECRET)%'
     STRAVA_TOKEN_ID: '%env(STRAVA_TOKEN_ID)%'
-    STRAVA_REFRES_TOKEN: '%env(STRAVA_REFRESH_TOKEN)%'
+    STRAVA_REFRESH_TOKEN: '%env(STRAVA_REFRESH_TOKEN)%'
     
 # see https://symfony.com/doc/current/reference/configuration/framework.html
 framework:

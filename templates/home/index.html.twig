@@ -14,7 +14,9 @@
             <div class="card">
                 <div class="card-body">
                     <h5>Strava SSO</h5>
-                    <a href="https://www.strava.com/oauth/authorize?client_id=131358&response_type=code&redirect_uri=http://localhost/exchange_token&approval_prompt=force&scope=read" target="_blank" class="btn btn-danger">STRAVA</a>
+                    <a href="{{ path('app_sso_connect', {
+                        service: 'strava'
+                    }) }}" class="btn btn-danger">STRAVA</a>
                 </div>
             </div>
         </div>

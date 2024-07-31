@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Service\FetchService;
 use http\Client;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,27 +15,24 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 #[Route('/exchange_token', name: 'app_exchange_token')]
 class ExchangeTokenController extends AbstractController
 {
-
-    const STRAVA_URL_LOGIN = 'https://www.strava.com/oauth/token'; # http://www.strava.com/oauth/authorize?client_id=131358&response_type=code&redirect_uri=http://localhost/exchange_token&approval_prompt=force&scope=read
-    const STRAVA_CLIENT_ID = '131358';
-    const STRAVA_TOKEN_ID = '42d52fa849055b4ef791f4d43ba627d08126434c';
-    const STRAVA_REFRESH_TOKEN_ID = '46de131914cb9f051e7c764ecdfe688ac4c9dc17';
+    const string STRAVA_URL_LOGIN = 'https://www.strava.com/oauth/token'; # http://www.strava.com/oauth/authorize?client_id=131358&response_type=code&redirect_uri=http://localhost/exchange_token&approval_prompt=force&scope=read
 
     public function __invoke(
         Request $request,
-        HttpClientInterface $client
+        FetchService $fetchService
     ): Response
     {
         $stravaCode = $request->get('code');
-        dump($stravaCode);
-        $stravaUrlReq = self::STRAVA_URL_LOGIN . '?client_id=' . self::STRAVA_CLIENT_ID . '&client_secret=' . self::STRAVA_TOKEN_ID . '&code='.$stravaCode.'&grant_type=authorization_code';
-        dump($stravaUrlReq);
-        die;
-        $test = $client->request('GET', $stravaUrlReq);
-        dump($test);
+        $stravaClientId = $this->getParameter('STRAVA_CLIENT_ID');
+        $stravaClientSecret = $this->getParameter('STRAVA_CLIENT_SECRET');
+        $stravaTokenId = $this->getParameter('STRAVA_TOKEN_ID');
 
-        return $this->render('exchange_token/index.html.twig', [
-            'controller_name' => 'ExchangeTokenController',
-        ]);
+        $stravaUrlReq = self::STRAVA_URL_LOGIN . '?client_id=' . $stravaClientId . '&client_secret=' . $stravaClientSecret . '&code='.$stravaCode.'&grant_type=authorization_code';
+
+        $test = $fetchService->post($stravaUrlReq);
+
+        dd($test);
+
+        return $this->redirectToRoute('app_dashboard');
     }
 }
