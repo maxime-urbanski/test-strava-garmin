@@ -2,30 +2,36 @@
 
 namespace App\Security;
 
+use App\Repository\UserRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Router;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
-use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
-use Symfony\Component\Security\Http\Authenticator\AbstractAuthenticator;
+use Symfony\Component\Security\Http\Authenticator\Passport\Badge\RememberMeBadge;
 use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge;
 use Symfony\Component\Security\Http\Authenticator\Passport\Passport;
+use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
+use KnpU\OAuth2ClientBundle\Security\Authenticator\OAuth2Authenticator;
+use League\OAuth2\Client\Token\AccessToken;
+use League\OAuth2\Client\Provider\ResourceOwnerInterface;
+use App\Entity\User;
 use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPassport;
-use Symfony\Component\Security\Http\ParameterBagUtils;
+
 
 /**
  * @see https://symfony.com/doc/current/security/custom_authenticator.html
  */
-class SSOAuthenticator extends AbstractAuthenticator
+abstract class SSOAuthenticator extends OAuth2Authenticator
 {
-    protected const string SERVICE_SSO_NAME = '';
+    protected string $serviceSsoName = '';
 
     public function __construct(
-        private readonly RouterInterface $router
+        private readonly RouterInterface $router,
+        private readonly ClientRegistry  $clientRegistry,
+        private readonly UserRepository $userRepository,
     )
     {
     }
@@ -38,30 +44,33 @@ class SSOAuthenticator extends AbstractAuthenticator
     public function supports(Request $request): ?bool
     {
         return 'app_sso_connect' === $request->attributes->get('_route')
-            && $request->get('service') === self::SERVICE_SSO_NAME;
+            && $request->get('service') === $this->serviceSsoName;
     }
 
     public function authenticate(Request $request): Passport
     {
-        dump('je passe par ici');
-        die;
-        // $apiToken = $request->headers->get('X-AUTH-TOKEN');
-        // if (null === $apiToken) {
-        // The token header was empty, authentication fails with HTTP Status
-        // Code 401 "Unauthorized"
-        // throw new CustomUserMessageAuthenticationException('No API token provided');
-        // }
+        $credentials = $this->fetchAccessToken($this->getClient());
+        $resourceOwner = $this->getResourceOwnerFromCredentials($credentials);
 
-        // implement your own logic to get the user identifier from `$apiToken`
-        // e.g. by looking up a user in the database using its API key
-        // $userIdentifier = /** ... */;
+        $user = $this->getUserFormResourceOwner($resourceOwner, $this->userRepository);
 
-        // return new SelfValidatingPassport(new UserBadge($userIdentifier));
+        return new SelfValidatingPassport(
+            userBadge: new UserBadge($user->getUserIdentifier(),fn () => $user),
+            badges: [
+                new RememberMeBadge()
+            ]
+        );
+    }
+
+
+    protected function getResourceOwnerFromCredentials(AccessToken $credentials): ResourceOwnerInterface
+    {
+        $this->getClient()->fetchUserFromToken($credentials);
     }
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
-        // on success, let the request continue
+
         return new RedirectResponse($this->router->generate('app_dashboard'));
     }
 
@@ -78,16 +87,9 @@ class SSOAuthenticator extends AbstractAuthenticator
         return new JsonResponse($data, Response::HTTP_UNAUTHORIZED);
     }
 
+    private function getClient() {
+        return $this->clientRegistry->getClient($this->serviceSsoName);
+    }
 
-
-    // public function start(Request $request, AuthenticationException $authException = null): Response
-    // {
-    //     /*
-    //      * If you would like this class to control what happens when an anonymous user accesses a
-    //      * protected page (e.g. redirect to /login), uncomment this method and make this class
-    //      * implement Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface.
-    //      *
-    //      * For more details, see https://symfony.com/doc/current/security/experimental_authenticators.html#configuring-the-authentication-entry-point
-    //      */
-    // }
+    abstract protected function getUserFormResourceOwner (ResourceOwnerInterface $resourceOwner, UserRepository $userRepository): ?User;
 }

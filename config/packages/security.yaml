@@ -9,6 +9,22 @@ security:
             entity:
                 class: App\Entity\User
                 property: email
+        
+        oauth_strava_provider:
+            entity:
+                class: App\Entity\User
+                property: stava_id
+        oauth_garmin_provider:
+            entity:
+                class: App\Entity\User
+                property: garmin_id
+        oauth_license_provider:
+            entity:
+                class: App\Entity\User
+                property: license_id
+        all_user_provider:
+            chain:
+                providers: ['app_user_provider', 'oauth_strava_provider', 'oauth_garmin_provider']
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
